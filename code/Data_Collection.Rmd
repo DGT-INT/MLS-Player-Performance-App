@@ -1,0 +1,118 @@
+---
+title: "Data Collection"
+author: "Daniel Tshiani"
+date: "2025-05-04"
+output: html_document
+---
+
+```{r}
+library(itscalledsoccer)
+library(dplyr)
+library(keyring)
+library(httr2)
+library(tidyverse)
+library(jsonlite)
+library(purrr)
+library(lubridate)
+```
+
+
+
+```{r}
+data <- AmericanSoccerAnalysis$new()
+```
+
+```{r}
+players <- data$get_players()
+players2 <- data$players
+
+teams <- data$get_teams()
+teams2 <- data$teams
+
+leagues <- data$LEAGUES
+
+player_salary <- data$get_player_salaries()
+team_salary <- data$get_team_salaries()
+
+
+```
+
+```{r}
+player_data <- left_join(player_salary, players2, by = "player_id") # joining player and salary data at the season/salary level
+
+player_data <- left_join(player_data, teams2, by = "team_id") # adding team names to the data
+```
+
+```{r}
+team_salary <- team_salary %>%
+  select(-count_players, -std_dev_guaranteed_compensation) %>%
+  rename(team_guaranteed_compensation = total_guaranteed_compensation,
+         team_avg_gauranteed_compenesation = avg_guaranteed_compensation,
+         team_median_guaranteed_compensation = median_guaranteed_compensation,
+         team_competition = competition)
+
+player_data <- left_join(player_data, team_salary, by = "team_id") # adding team salary data
+```
+
+```{r}
+str(data)
+```
+
+```{r}
+goals <- data$get_player_xgoals(season_name = 2024)
+goals_added <- data$get_player_goals_added()
+pass <- data$get_player_xpass(split_by_seasons = TRUE)
+```
+
+# Focusing on dat for Offensive tab
+
+```{r}
+offensive_data <- data$get_player_xgoals(season_name = 2024)
+player_data <- data$players
+player_data <- player_data %>%
+  select(-competitions)
+
+offensive_data <- left_join(offensive_data, player_data, by = "player_id")
+offensive_data <- offensive_data %>%
+  relocate(player_name, birth_date, general_position, nationality, player_id, team_id)
+
+team_data <- data$teams
+
+offensive_data <- offensive_data %>%
+  mutate(team_id = sapply(team_id, function(x) as.character(x[1])))
+
+offensive_data <- left_join(offensive_data, team_data, by = "team_id")
+offensive_data <- offensive_data %>% select(-team_short_name, -team_abbreviation)
+
+offensive_data <- offensive_data %>%
+  relocate(player_name, team_name, birth_date, general_position, nationality, player_id, team_id)
+```
+
+
+```{r}
+offensive_data <- offensive_data %>%
+  mutate(
+    birth_date = ymd(birth_date),      # convert to Date format if not already
+    age = as.integer(floor(interval(birth_date, today()) / years(1)))
+  ) %>%
+    relocate(player_name, team_name, age, birth_date, general_position, nationality)
+```
+
+```{r}
+# Adding salary of offensive data
+salary_data <- data$get_player_salaries(season_name = 2024)
+
+# getting rid of duplicates player_id and team_id combo
+salary_data <- salary_data %>%
+  arrange(desc(mlspa_release)) %>%
+  distinct(player_id, team_id, .keep_all = TRUE)
+
+offensive_data <- left_join(offensive_data, salary_data, by = c("player_id", "team_id"))
+```
+
+
+```{r}
+saveRDS(offensive_data, file = "../data/offensive_data.rds")
+```
+
+
