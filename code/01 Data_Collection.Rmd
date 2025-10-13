@@ -16,14 +16,14 @@ library(purrr)
 library(lubridate)
 ```
 
-
-
 ```{r}
-# retreiving the environment
+# retrieving the environment
 data <- AmericanSoccerAnalysis$new()
 ```
+
+
 ```{r}
-# retreving data
+# retrieving data
 players_data <- data$players
 team_data <- data$teams
 team_salary_data <- data$get_team_salaries()
@@ -32,6 +32,32 @@ player_goals_added_data <- data$get_player_goals_added()
 player_xpass_data <- data$get_player_xpass()
 player_xgoals_data <- data$get_player_xgoals()
 ```
+
+```{r}
+# Creating master player-level dataset by season
+
+master_data <- player_salary_data
+glimpse(master_data)
+```
+
+```{r}
+sum(duplicated(master_data[, c("player_id", "team_id", "season_name", "base_salary", "guaranteed_compensation", "competition")]))
+
+# there are duplicates based on mlspa_release
+sum(duplicated(master_data[, c("player_id", "team_id", "season_name", "mlspa_release")]))
+
+# keeping the later salaries by mlspa_release
+master_data <- master_data %>%
+  arrange(player_id, team_id, season_name, mlspa_release)
+
+master_data <- master_data %>%
+  distinct(player_id, team_id, season_name, .keep_all = TRUE) %>%
+  select(-mlspa_release)
+
+glimpse(master_data)
+rm(player_salary_data)
+```
+
 
 ```{r}
 # creating master data frame at the player level
@@ -58,20 +84,31 @@ master_data <- master_data %>%
   mutate(homegrown = ifelse(nationality %in% c("USA", "Canada"), "Domestic", "Foreign")) %>%
   mutate(homegrown = as.factor(homegrown)) %>%
   relocate (homegrown, .after = nationality) %>%
-  relocate(weight_lb, .after = height)
+  relocate(weight_lb, .after = height_inches)
   
-
 glimpse(master_data)
+rm(players_data)
+```
+
+```{r}
+# joining player expected goals data
+glimpse(player_xgoals_data)
+sum(is.na(player_xgoals_data$player_id))
+```
+```{r}
+unmatched <- bind_rows(
+  anti_join(master_data, player_xgoals_data, by = "player_id"),
+  anti_join(player_xgoals_data, master_data, by = "player_id")
+)
 ```
 
 
 ```{r}
-master_data$birth_date <- ymd(master_data$birth_data)
-master_data$age <- year(today()) - year(master_data$birth_date)
-# Adjust for whether the birthday has happened this year
-master_data$age <- master_data$age - (yday(today()) < yday(master_data$birth_date))
-
+master_data1 <- left_join(master_data, player_xgoals_data, by = "player_id")
+glimpse(master_data1)
 ```
+
+
 
 
 
@@ -165,7 +202,7 @@ offensive_data <- left_join(offensive_data, salary_data, by = c("player_id", "te
 
 
 ```{r}
-saveRDS(offensive_data, file = "../data/offensive_data.rds")
+#saveRDS(offensive_data, file = "../data/offensive_data.rds")
 ```
 
 
