@@ -26,11 +26,11 @@ data <- AmericanSoccerAnalysis$new()
 # retrieving data
 players_data <- data$players
 team_data <- data$teams
-team_salary_data <- data$get_team_salaries()
 player_salary_data <- data $get_player_salaries()
 player_goals_added_data <- data$get_player_goals_added()
 player_xpass_data <- data$get_player_xpass()
 player_xgoals_data <- data$get_player_xgoals()
+rm(data)
 ```
 
 ```{r}
@@ -54,20 +54,48 @@ master_data <- master_data %>%
   distinct(player_id, team_id, season_name, .keep_all = TRUE) %>%
   select(-mlspa_release)
 
-glimpse(master_data)
 rm(player_salary_data)
-```
-
-
-```{r}
-# creating master data frame at the player level
-master_data <- players_data
 glimpse(master_data)
 ```
 
+
 ```{r}
+# joining player data
+glimpse(players_data)
+sum(duplicated(players_data$player_id))
+```
+```{r}
+unmatched_in_master <- anti_join(master_data, players_data, by = "player_id") # everyone is the master data appears in player data
+unmatched_in_player <- anti_join(players_data, master_data, by = "player_id") # there are players in the player data who arent in the master. regardless in the end i want all the players so i'll keep them and only dropped them during model training.
+rm(unmatched_in_master, unmatched_in_player)
+master_data <- full_join(master_data, players_data, by= "player_id")
+rm(players_data)
+```
+
+```{r}
+# joining team data
+glimpse(team_data)
+team_data <- team_data %>%
+  mutate(team_competitions = competitions) %>%
+  select(-competitions)
+
+master_data <- full_join(master_data, team_data, by = "team_id")
+rm(team_data)
+```
+
+```{r}
+#pick up from here.
+glimpse(player_goals_added_data)
+glimpse(player_xgoals_data)
+glimpse(player_xpass_data)
+```
+
+
+
+```{r}
+# i need to do this once everything is merged
 # quick clean of player data
-master_data <- master_data %>%
+test <- players_data %>%
   mutate(
     birth_date = ymd(birth_date),
     age = year(today()) - year(birth_date) - (yday(today()) < yday(birth_date))
