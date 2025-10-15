@@ -21,7 +21,6 @@ library(lubridate)
 data <- AmericanSoccerAnalysis$new()
 ```
 
-
 ```{r}
 # retrieving data
 players_data <- data$players
@@ -58,7 +57,6 @@ rm(player_salary_data)
 glimpse(master_data)
 ```
 
-
 ```{r}
 # joining player data
 glimpse(players_data)
@@ -84,14 +82,40 @@ rm(team_data)
 ```
 
 ```{r}
-#pick up from here.
+# Given the timeframe, I am excluding the player goals added data. I didnt understand the meaning of the values. in future iterations on the app this data should be looked into again.
 glimpse(player_goals_added_data)
+rm(player_goals_added_data)
+```
+
+```{r}
 glimpse(player_xgoals_data)
+sum(duplicated(player_xgoals_data$player_id))
+sum(duplicated(master_data$player_id))
+
+# need to import it 1 season at a time and label the season_name in order to join it properly with master data
+data <- AmericanSoccerAnalysis$new()
+
+for (year in 2013:2025) {
+  var_name <- paste0("player_xpass_data_", year)
+  
+  temp <- data$get_player_xpass(season_name = as.character(year)) %>%
+    mutate(season_name = year)
+  
+  assign(var_name, temp)
+}
+rm(data)
+
+#now i can run a loop to do a full join by player_id and season_name; and then clean up the environment
+```
+
+```{r}
 glimpse(player_xpass_data)
 ```
 
 
 
+
+# cleaning
 ```{r}
 # i need to do this once everything is merged
 # quick clean of player data
