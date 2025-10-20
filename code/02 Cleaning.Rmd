@@ -1,0 +1,213 @@
+---
+title: "02 Cleaning"
+author: "Daniel Tshiani"
+date: "2025-10-20"
+output: html_document
+---
+
+```{r}
+library(tidyverse)
+```
+
+
+```{r}
+master_data <- readRDS("../data/01 preprocessed data.rds")
+```
+
+```{r}
+# Correcting data types, Encode categorical variables & scaling necessary when
+glimpse(master_data)
+```
+```{r}
+master_data <- master_data %>%
+  mutate(position = as.factor(position),
+         competition = as.factor(competition),
+         birth_date = ymd(birth_date),
+         age = year(today()) - year(birth_date) - (yday(today()) < yday(birth_date)),
+         age = as.integer(age)
+         ) %>%
+  relocate(age, .after = birth_date) %>%
+  mutate(homegrown = ifelse(nationality %in% c("USA", "Canada"), "Domestic", "Foreign")) %>%
+  mutate(homegrown = as.factor(homegrown)) %>%
+  relocate (homegrown, .after = nationality) %>%
+  mutate(height_inches = height_ft * 12 + height_in,
+         height_inches = as.integer(height_inches)) %>%
+  relocate(height_inches, .after = height_in) %>%
+  relocate(competitions, .after = competition) %>% # I need to look into this more closely but competition will be prioritized due to it being a single character vs a list
+  relocate(team_competitions, .after = competitions) %>% # need to look into this more closely
+  relocate(general_position, .after = position) %>%
+  mutate(pass_completion_percentage = 100 * pass_completion_percentage,
+         xpass_completion_percentage = 100 * xpass_completion_percentage,
+         share_team_touches = 100 * share_team_touches)
+  
+glimpse(master_data)
+```
+
+```{r}
+# I need to look at this section again
+
+# Checking and Removing duplicates
+sum(duplicated(master_data)) # no duplicates accross all rows
+sum(duplicated(master_data[, c("player_id", "team_id.x", "season_name")])) # duplicates across these 3 variables
+
+duplicates <- master_data %>%
+  group_by(player_id, team_id.x, season_name) %>%
+  filter(n() > 1) %>%   
+  ungroup() %>%
+  arrange(player_id, team_id.x, season_name)
+
+table(duplicates$team_id.x)
+# the duplicates are because they are missing the duplicates$team_id.x variable
+
+sum(duplicated(duplicates[, c("player_id", "team_id.y", "season_name")])) # when i use the team_id.y variable they are unique
+class(duplicates$team_id.y) # its a list
+max(sapply(duplicates$team_id.y, length)) # max number of elements is 1 so shouldnt cause any big issues
+
+duplicates <- duplicates %>%
+  mutate(team_id.x = as.character(team_id.y))
+
+duplicates1 <- duplicates %>%
+  select(player_id, team_id.x, season_name)
+
+test <- left_join(duplicates1, master_data, by= c("player_id", "team_id.x", "season_name"))
+```
+
+
+# Initial Preprocessing Completed
+💡 Summary workflow after merging your dataframe:
+Inspect & handle missing values
+Identify & handle outliers
+Feature engineering
+Split train/test
+Explore correlations & distributions
+Save cleaned dataset + preprocessing pipeline
+
+
+
+# to be deleted
+```{r}
+
+master_data <- master_data 
+
+master_data <- master_data 
+  
+glimpse(master_data)
+rm(players_data)
+```
+
+```{r}
+# joining player expected goals data
+glimpse(player_xgoals_data)
+sum(is.na(player_xgoals_data$player_id))
+```
+```{r}
+unmatched <- bind_rows(
+  anti_join(master_data, player_xgoals_data, by = "player_id"),
+  anti_join(player_xgoals_data, master_data, by = "player_id")
+)
+```
+
+
+```{r}
+master_data1 <- left_join(master_data, player_xgoals_data, by = "player_id")
+glimpse(master_data1)
+```
+
+
+
+
+# 0ld
+```{r}
+players <- data$get_players()
+players2 <- data$players
+
+teams <- data$get_teams()
+teams2 <- data$teams
+
+leagues <- data$LEAGUES
+
+player_salary <- data$get_player_salaries()
+team_salary <- data$get_team_salaries()
+
+
+```
+
+```{r}
+player_data <- left_join(player_salary, players2, by = "player_id") # joining player and salary data at the season/salary level
+
+player_data <- left_join(player_data, teams2, by = "team_id") # adding team names to the data
+```
+
+```{r}
+team_salary <- team_salary %>%
+  select(-count_players, -std_dev_guaranteed_compensation) %>%
+  rename(team_guaranteed_compensation = total_guaranteed_compensation,
+         team_avg_gauranteed_compenesation = avg_guaranteed_compensation,
+         team_median_guaranteed_compensation = median_guaranteed_compensation,
+         team_competition = competition)
+
+player_data <- left_join(player_data, team_salary, by = "team_id") # adding team salary data
+```
+
+```{r}
+str(data)
+```
+
+```{r}
+goals <- data$get_player_xgoals(season_name = 2024)
+goals_added <- data$get_player_goals_added()
+pass <- data$get_player_xpass(split_by_seasons = TRUE)
+```
+
+# Focusing on dat for Offensive tab
+
+```{r}
+offensive_data <- data$get_player_xgoals(season_name = 2024)
+player_data <- data$players
+player_data <- player_data %>%
+  select(-competitions)
+
+offensive_data <- left_join(offensive_data, player_data, by = "player_id")
+offensive_data <- offensive_data %>%
+  relocate(player_name, birth_date, general_position, nationality, player_id, team_id)
+
+team_data <- data$teams
+
+offensive_data <- offensive_data %>%
+  mutate(team_id = sapply(team_id, function(x) as.character(x[1])))
+
+offensive_data <- left_join(offensive_data, team_data, by = "team_id")
+offensive_data <- offensive_data %>% select(-team_short_name, -team_abbreviation)
+
+offensive_data <- offensive_data %>%
+  relocate(player_name, team_name, birth_date, general_position, nationality, player_id, team_id)
+```
+
+
+```{r}
+offensive_data <- offensive_data %>%
+  mutate(
+    birth_date = ymd(birth_date),      # convert to Date format if not already
+    age = as.integer(floor(interval(birth_date, today()) / years(1)))
+  ) %>%
+    relocate(player_name, team_name, age, birth_date, general_position, nationality)
+```
+
+```{r}
+# Adding salary of offensive data
+salary_data <- data$get_player_salaries(season_name = 2024)
+
+# getting rid of duplicates player_id and team_id combo
+salary_data <- salary_data %>%
+  arrange(desc(mlspa_release)) %>%
+  distinct(player_id, team_id, .keep_all = TRUE)
+
+offensive_data <- left_join(offensive_data, salary_data, by = c("player_id", "team_id"))
+```
+
+
+```{r}
+#saveRDS(offensive_data, file = "../data/offensive_data.rds")
+```
+
+
