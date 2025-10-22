@@ -48,10 +48,11 @@ glimpse(master_data)
 
 # Checking and Removing duplicates
 sum(duplicated(master_data)) # no duplicates accross all rows
-sum(duplicated(master_data[, c("player_id", "team_id.x", "season_name")])) # duplicates across these 3 variables
+sum(duplicated(master_data[, c("player_id", "team_id.x", "season_name")])) # 339 duplicates across these 3 variables
 
 duplicates <- master_data %>%
   group_by(player_id, team_id.x, season_name) %>%
+  mutate(count = n()) %>%
   filter(n() > 1) %>%   
   ungroup() %>%
   arrange(player_id, team_id.x, season_name)
@@ -63,13 +64,31 @@ sum(duplicated(duplicates[, c("player_id", "team_id.y", "season_name")])) # when
 class(duplicates$team_id.y) # its a list
 max(sapply(duplicates$team_id.y, length)) # max number of elements is 1 so shouldnt cause any big issues
 
+sum(is.na(master_data$team_id.x))
+
+test <- master_data %>%
+  mutate(team_id.x = ifelse(is.na(team_id.x), team_id.y, team_id.x))
+sum(is.na(test$team_id.x))
+sum(duplicated(test[, c("player_id", "team_id.x", "season_name")])) # after joining the team_id.y with team_id.x, i've gotten the duplicated down to 44
+
+duplicates_test <- test %>%
+  group_by(player_id, team_id.x, season_name) %>%
+  mutate(count = n()) %>%
+  filter(n() > 1) %>%   
+  ungroup() %>%
+  arrange(player_id, team_id.x, season_name)
+
 duplicates <- duplicates %>%
   mutate(team_id.x = as.character(team_id.y))
+
+setdiff(duplicates1$team_id.x, master_data$team_id.x)
+
+#now below here, the rest of the code isnt doing what i want it to do
 
 duplicates1 <- duplicates %>%
   select(player_id, team_id.x, season_name)
 
-test <- left_join(duplicates1, master_data, by= c("player_id", "team_id.x", "season_name"))
+test <- left_join(duplicates, master_data, by= c("player_id", "team_id.x", "season_name"))
 ```
 
 
