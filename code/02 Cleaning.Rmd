@@ -14,8 +14,8 @@ library(tidyverse)
 master_data <- readRDS("../data/01 preprocessed data.rds")
 ```
 
-```{r}
 # Correcting data types, Encode categorical variables & scaling necessary when
+```{r}
 glimpse(master_data)
 ```
 ```{r}
@@ -43,11 +43,9 @@ master_data <- master_data %>%
 glimpse(master_data)
 ```
 
-```{r}
-# I need to look at this section again
-
 # Checking and Removing duplicates
-sum(duplicated(master_data)) # no duplicates accross all rows
+```{r}
+sum(duplicated(master_data)) # no duplicates across all rows
 sum(duplicated(master_data[, c("player_id", "team_id.x", "season_name")])) # 339 duplicates across these 3 variables
 
 duplicates <- master_data %>%
@@ -57,44 +55,116 @@ duplicates <- master_data %>%
   ungroup() %>%
   arrange(player_id, team_id.x, season_name)
 
-table(duplicates$team_id.x)
-# the duplicates are because they are missing the duplicates$team_id.x variable
+table(duplicates$team_id.x) # the duplicates are because they are missing the duplicates$team_id.x variable
+# looks like one of the previous datasets didnt merge properly. they are all missing team_id.x so i will use team_id.y for these observations
 
 sum(duplicated(duplicates[, c("player_id", "team_id.y", "season_name")])) # when i use the team_id.y variable they are unique
+```
+
+```{r}
+# to find where the merge is going wrong i need to go back and create flags for each dataset before merging but for the sake of time i will continue to move forward by replacing the missing team_id.x with team_id.y and seeing what i can salvage
+
 class(duplicates$team_id.y) # its a list
 max(sapply(duplicates$team_id.y, length)) # max number of elements is 1 so shouldnt cause any big issues
 
-sum(is.na(master_data$team_id.x))
+missing_playerID <- unique(duplicates$player_id)
 
-test <- master_data %>%
-  mutate(team_id.x = ifelse(is.na(team_id.x), team_id.y, team_id.x))
-sum(is.na(test$team_id.x))
-sum(duplicated(test[, c("player_id", "team_id.x", "season_name")])) # after joining the team_id.y with team_id.x, i've gotten the duplicated down to 44
+max(sapply(master_data$team_id.y, length))
 
-duplicates_test <- test %>%
+master_data <- master_data %>%
+  mutate(team_id.y2 = map(team_id.y, ~ if (length(.x) == 1) .x else NULL))
+max(sapply(master_data$team_id.y2, length)) 
+
+master_data <- master_data %>%
+  mutate(team_id.x = ifelse(is.na(team_id.x), team_id.y2, team_id.x)) %>%
+  select(-team_id.y2)
+```
+
+```{r}
+# now that i replaced the missing team_id.x with team_id.y, i will try again to Check and Remove duplicates
+sum(duplicated(master_data[, c("player_id", "team_id.x", "season_name")])) # now i dropped from 339 to 44 duplicates across these 3 variables
+
+duplicates <- master_data %>%
   group_by(player_id, team_id.x, season_name) %>%
   mutate(count = n()) %>%
   filter(n() > 1) %>%   
   ungroup() %>%
   arrange(player_id, team_id.x, season_name)
 
-duplicates <- duplicates %>%
-  mutate(team_id.x = as.character(team_id.y))
+sum(duplicated(duplicates[, c("player_id", "team_id.y", "season_name")])) 
 
-setdiff(duplicates1$team_id.x, master_data$team_id.x)
+# I did a visual inspection and looks like these are genuine duplicates. however for each pair, 1 of them is missing team name and related information so i will keep the more complete row in the master_data
 
-#now below here, the rest of the code isnt doing what i want it to do
-
-duplicates1 <- duplicates %>%
-  select(player_id, team_id.x, season_name)
-
-test <- left_join(duplicates, master_data, by= c("player_id", "team_id.x", "season_name"))
+master_data <- master_data %>%
+  arrange(player_id, season_name, team_id.x, team_name) %>%
+  distinct(player_id, season_name, team_id.x, .keep_all = TRUE)
 ```
+
+# Inspecting & handling missing values
+```{r}
+library(visdat)
+vis_miss(master_data, warn_large_data = FALSE)
+```
+There is alot of data missing. I dont want to drop players from the final app so i will have 1 dataset for the app will all the data possible, and another cleaner version of the data that will be use to train and test the models
+
+## I want to see how missingsness looks by competition
+
+```{r}
+mls <- master_data %>%
+  filter(competition == "mls")
+vis_miss(mls)
+```
+```{r}
+mlsnp <- master_data %>%
+  filter(competition == "mlsnp")
+vis_miss(mlsnp)
+```
+So i dont have any salary data for MLSNP. This is an issue. I am asuming other leagues will be missing salary too but for the purpose of using this project to diplay my soccer analytics abilities i will continue.
+
+```{r}
+nasl <- master_data %>%
+  filter(competition == "nasl")
+vis_miss(nasl)
+```
+
+
+```{r}
+nwsl <- master_data %>%
+  filter(competition == "nwsl")
+vis_miss(nwsl)
+```
+
+
+```{r}
+usl1 <- master_data %>%
+  filter(competition == "usl1")
+vis_miss(usl1)
+```
+
+
+```{r}
+table(master_data$competition)
+```
+
+
+```{r}
+app_data <- master_data # data for the deployment
+
+test <- master_data %>%
+  mutate(general_position = ifelse(is.na(general_position), position, general_position)) %>%
+  select(-position)
+
+vis_miss(test, warn_large_data = FALSE)
+```
+
+
+
+
 
 
 # Initial Preprocessing Completed
 💡 Summary workflow after merging your dataframe:
-Inspect & handle missing values
+
 Identify & handle outliers
 Feature engineering
 Split train/test
