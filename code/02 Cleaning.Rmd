@@ -12,12 +12,10 @@ library(tidyverse)
 
 ```{r}
 master_data <- readRDS("../data/01 preprocessed data.rds")
+glimpse(master_data)
 ```
 
 # Correcting data types, Encode categorical variables & scaling necessary when
-```{r}
-glimpse(master_data)
-```
 ```{r}
 master_data <- master_data %>%
   mutate(position = as.factor(position),
@@ -35,7 +33,8 @@ master_data <- master_data %>%
   relocate(height_inches, .after = height_in) %>%
   relocate(competitions, .after = competition) %>% # I need to look into this more closely but competition will be prioritized due to it being a single character vs a list
   relocate(team_competitions, .after = competitions) %>% # need to look into this more closely
-  relocate(general_position, .after = position) %>%
+  relocate(general_position.x, .after = position) %>%
+  relocate(general_position.y, .after = general_position.x) %>%
   mutate(pass_completion_percentage = 100 * pass_completion_percentage,
          xpass_completion_percentage = 100 * xpass_completion_percentage,
          share_team_touches = 100 * share_team_touches)
@@ -100,7 +99,7 @@ master_data <- master_data %>%
   distinct(player_id, season_name, team_id.x, .keep_all = TRUE)
 ```
 
-# Inspecting & handling missing values
+# Inspecting & Handling Missing Values
 ```{r}
 library(visdat)
 vis_miss(master_data, warn_large_data = FALSE)
@@ -114,12 +113,13 @@ mls <- master_data %>%
   filter(competition == "mls")
 vis_miss(mls)
 ```
+
 ```{r}
 mlsnp <- master_data %>%
   filter(competition == "mlsnp")
 vis_miss(mlsnp)
 ```
-So i dont have any salary data for MLSNP. This is an issue. I am asuming other leagues will be missing salary too but for the purpose of using this project to diplay my soccer analytics abilities i will continue.
+So i don't have any salary data for MLSNP. This is an issue. I am assuming other leagues will be missing salary too but for the purpose of using this project to display my soccer analytics abilities i will continue.
 
 ```{r}
 nasl <- master_data %>%
@@ -145,27 +145,116 @@ vis_miss(usl1)
 ```{r}
 table(master_data$competition)
 ```
-
+So I am missing alot of data outside the MLS. This is an issue. I will train/test the models with the data i have. I will create another dataset for app deployment so all the players can still be searched.
 
 ```{r}
-app_data <- master_data # data for the deployment
+app_deployment_data <- master_data # data for the deployment
+working_data <- master_data
 
-test <- master_data %>%
-  mutate(general_position = ifelse(is.na(general_position), position, general_position)) %>%
-  select(-position)
+rm(duplicates, master_data, mls, mlsnp, nasl, nwsl, usl1, missing_playerID)
+```
 
-vis_miss(test, warn_large_data = FALSE)
+```{r}
+working_data %>%
+  summarise(
+    pct_missing_base_salary = mean(is.na(base_salary)) * 100
+  )
+```
+```{r}
+working_data %>%
+  group_by(competition) %>%
+  summarise(
+    pct_missing_base_salary = mean(is.na(base_salary)) * 100
+  )
+```
+
+so the plan is basically to drop the variables whos missing base_salary. (I know its not ideal but yea...) so essentially the model will only me train on MLS players
+
+```{r}
+working_data <- working_data %>%
+  filter(!is.na(base_salary))
+```
+
+```{r}
+vis_miss(working_data)
+```
+```{r}
+# Now that the missingness througout the dataset is 10%, i will loop throug it and replace the missing values with mean or mode depending on the type of variable.
+
+# Function to get the mode
+get_mode <- function(x) {
+  ux <- na.omit(unique(x))
+  ux[which.max(tabulate(match(x, ux)))]
+}
+
+working_data <- working_data %>%
+  # Drop rows with missing player_id
+  filter(!is.na(player_id)) %>%
+  
+  # Replace missing team_id variants with "Free Agent"
+  mutate(across(
+    c(team_id.x, team_id.y, team_id),
+    ~ replace(.x, is.na(.x) | .x == "", "Free Agent")
+  )) %>%
+  
+  # Replace other missing values
+  mutate(across(
+    # skip id columns and team columns we already handled
+    -c(player_id, team_id.x, team_id.y, team_id),
+    ~ if (is.numeric(.x)) {
+        replace(.x, is.na(.x), mean(.x, na.rm = TRUE))
+      } else {
+        replace(.x, is.na(.x), get_mode(.x))
+      }
+  ))
+
+vis_miss(working_data)
+```
+
+# Identify & handle outliers
+```{r}
+ggplot(working_data, aes(x = base_salary)) +
+  geom_histogram(binwidth = 100, fill = "skyblue", color = "black") +
+  labs(
+    title = "Distribution of Base Salary",
+    x = "Base Salary",
+    y = "Count"
+  ) +
+  theme_minimal()
+```
+```{r}
+# Find Messi's salary
+messi_salary <- working_data %>%
+  filter(player_name == "Lionel Messi", season_name == 2025) %>%
+  pull(base_salary)
+
+# Plot
+ggplot(working_data, aes(x = base_salary)) +
+  geom_histogram(binwidth = 100, fill = "skyblue", color = "black") +
+  geom_vline(aes(xintercept = messi_salary),
+             color = "red", linewidth = 1.2, linetype = "dashed") +
+  annotate("text", x = messi_salary, y = Inf, vjust = 2, hjust = 0,
+           label = "Messi", color = "red", fontface = "bold") +
+  labs(
+    title = "Distribution of Base Salary",
+    x = "Base Salary",
+    y = "Count"
+  ) +
+  theme_minimal()
+
 ```
 
 
+On a second thought I decided to leave in the outliers. I already know there are players like Messi who has a crazy salary, however I do believe superstar coming to the MLS and having huge salaries is a real phenomenon and should be reflected in the model.
 
+# Cleaning the data structure
 
 
 
 # Initial Preprocessing Completed
 💡 Summary workflow after merging your dataframe:
 
-Identify & handle outliers
+
 Feature engineering
 Split train/test
 Explore correlations & distributions

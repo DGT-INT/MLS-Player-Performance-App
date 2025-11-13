@@ -122,6 +122,11 @@ rm(player_xpass_all, temp)
 ```{r}
 glimpse(player_xgoals_data)
 ```
+
+```{r}
+glimpse(master_data)
+```
+
 ```{r}
 for (year in 2013:2025) {
   var_name <- paste0("player_xgoals_data_", year)
@@ -143,6 +148,7 @@ rm(list = paste0("player_xgoals_data_", 2013:2025), player_xgoals_data)
 master_data <- full_join(master_data, player_xgoals_all, by= c("player_id", "season_name", "competition"))
 rm(test)
 rm(player_xgoals_all, temp, data)
+glimpse(master_data)
 ```
 
 ```{r}
