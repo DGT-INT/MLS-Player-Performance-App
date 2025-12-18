@@ -1,0 +1,13 @@
+name: Player_Performance_Lab
+title:
+username: dgt-international
+account: dgt-international
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 16058285
+bundleId: 11174777
+url: https://dgt-international.shinyapps.io/Player_Performance_Lab/
+version: 1
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: .RData|code/.RData|code/01 Preprocessing.Rmd|code/02 Cleaning.Rmd|code/Data_Collection.Rmd|data/01 preprocessed data.rds|Documents/Progress Report.docx|Documents/project plan.docx|Documents/Revisiting the app.docx|Documents/Vignette.docx

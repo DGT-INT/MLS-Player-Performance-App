@@ -6,7 +6,7 @@ library(dplyr)
 library(tidyverse)
 library(scales)
 
-offensive_data <- readRDS("../data/offensive_data.rds")
+offensive_data <- readRDS("data/offensive_data.rds")
 
 # Define UI for application that draws a histogram
 ui <- navbarPage("Player Performance Lab",
@@ -33,7 +33,7 @@ ui <- navbarPage("Player Performance Lab",
                             varSelectInput("offensive_var1", "What metric are you interested in?", data= offensive_data, selected = "goals"),
                             varSelectInput("offensive_var2", "What other metric are you interested in?", data= offensive_data, selected = "goals"),
                             sliderInput("offensive_age", "Select an age range", value= c(17,37), min = 15, max = 45),
-                            verbatimTextOutput("lm_results"),
+                            #verbatimTextOutput("lm_results"),
                             textInput("player_search", "Search for a player using their full name (case sensative):", value = ""),
                             verbatimTextOutput("predicted_salary"),
                             verbatimTextOutput("actual_salary")
@@ -85,7 +85,7 @@ server <- function(input, output, session) {
 # Home Tab
   output$logo <- renderImage({
     list(
-      src = "../images/logo.png",
+      src = "images/logo.png",
       contentType = 'image/png',
       width = 500,        # or any size you prefer
       alt = "App Logo"
