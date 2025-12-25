@@ -5,7 +5,7 @@ account: dgt-international
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 16058285
-bundleId: 11174777
+bundleId: 11339255
 url: https://dgt-international.shinyapps.io/Player_Performance_Lab/
 version: 1
 asMultiple: FALSE

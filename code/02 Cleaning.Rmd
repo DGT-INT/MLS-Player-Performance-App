@@ -44,7 +44,7 @@ glimpse(master_data)
 
 # Checking and Removing duplicates
 ```{r}
-sum(duplicated(master_data)) # no duplicates across all rows
+# sum(duplicated(master_data)) # no duplicates across all rows, in an update the competition variables became lists
 sum(duplicated(master_data[, c("player_id", "team_id.x", "season_name")])) # 339 duplicates across these 3 variables
 
 duplicates <- master_data %>%
@@ -81,7 +81,7 @@ master_data <- master_data %>%
 
 ```{r}
 # now that i replaced the missing team_id.x with team_id.y, i will try again to Check and Remove duplicates
-sum(duplicated(master_data[, c("player_id", "team_id.x", "season_name")])) # now i dropped from 339 to 44 duplicates across these 3 variables
+#sum(duplicated(master_data[, c("player_id", "team_id.x", "season_name")])) # now i dropped from 339 to 44 duplicates across these 3 variables. again variables were updated to list
 
 duplicates <- master_data %>%
   group_by(player_id, team_id.x, season_name) %>%
@@ -149,7 +149,7 @@ So I am missing alot of data outside the MLS. This is an issue. I will train/tes
 
 ```{r}
 app_deployment_data <- master_data # data for the deployment
-working_data <- master_data
+working_data <- master_data # data for modeling
 
 rm(duplicates, master_data, mls, mlsnp, nasl, nwsl, usl1, missing_playerID)
 ```
@@ -160,6 +160,7 @@ working_data %>%
     pct_missing_base_salary = mean(is.na(base_salary)) * 100
   )
 ```
+
 ```{r}
 working_data %>%
   group_by(competition) %>%
@@ -168,7 +169,7 @@ working_data %>%
   )
 ```
 
-so the plan is basically to drop the variables whos missing base_salary. (I know its not ideal but yea...) so essentially the model will only me train on MLS players
+so the plan is basically to drop the variables whos missing base_salary. (I know its not ideal but yea...) so essentially the model will only be train on MLS players
 
 ```{r}
 working_data <- working_data %>%
@@ -178,8 +179,9 @@ working_data <- working_data %>%
 ```{r}
 vis_miss(working_data)
 ```
+
 ```{r}
-# Now that the missingness througout the dataset is 10%, i will loop throug it and replace the missing values with mean or mode depending on the type of variable.
+# Now that the missingness througout the dataset is 10%, i will loop through it and replace the missing values with mean or mode depending on the type of variable.
 
 # Function to get the mode
 get_mode <- function(x) {
@@ -222,6 +224,7 @@ ggplot(working_data, aes(x = base_salary)) +
   ) +
   theme_minimal()
 ```
+
 ```{r}
 # Find Messi's salary
 messi_salary <- working_data %>%
@@ -243,22 +246,21 @@ ggplot(working_data, aes(x = base_salary)) +
   theme_minimal()
 
 ```
-
-
-On a second thought I decided to leave in the outliers. I already know there are players like Messi who has a crazy salary, however I do believe superstar coming to the MLS and having huge salaries is a real phenomenon and should be reflected in the model.
+based a on a visual inspection there appears to be outliers. However, I decided to leave in the outliers. I knew there are players like Messi who has a crazy salary. I do believe superstar coming to the MLS and having huge salaries is a real phenomenon and should be reflected in the model.
 
 # Cleaning the data structure
-
+I need to clean the structure so ensuring the variables are the right type and name.
 
 
 # Initial Preprocessing Completed
-💡 Summary workflow after merging your dataframe:
+
+# Next steps
+- Feature engineering ( off the top of my head i am thinking about goals per 90 min and assist per 90 minutes. as we move forward we will see what else comes to mind)
+- EDA such as Explore correlations & distributions
+- Modeling
+- App Development
 
 
-Feature engineering
-Split train/test
-Explore correlations & distributions
-Save cleaned dataset + preprocessing pipeline
 
 
 
