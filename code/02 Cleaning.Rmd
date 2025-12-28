@@ -250,6 +250,25 @@ based a on a visual inspection there appears to be outliers. However, I decided 
 
 # Cleaning the data structure
 I need to clean the structure so ensuring the variables are the right type and name.
+```{r}
+glimpse(working_data)
+```
+
+```{r}
+working_data2 <- working_data %>%
+  select(-player_id, -team_id.x) %>%
+  rename(season = season_name,
+         "general position" = position,
+         position = general_position.x,
+         "base salary" = base_salary,
+         "gauranteed compensation" = guaranteed_compensation) %>%
+  select(-general_position.y, -competitions) %>%
+  mutate( position = as.factor(position))
+
+glimpse(working_data2)
+  # pick up from team_comp
+```
+
 
 
 # Initial Preprocessing Completed
