@@ -263,10 +263,28 @@ working_data2 <- working_data %>%
          "base salary" = base_salary,
          "gauranteed compensation" = guaranteed_compensation) %>%
   select(-general_position.y, -competitions) %>%
-  mutate( position = as.factor(position))
+  mutate( position = as.factor(position)) %>%
+  select(-team_competitions) %>%
+  rename("player name" = player_name,
+         "date of birth" = birth_date,
+         "height (ft)" = height_ft,
+         "height (in)" = height_in,
+         weight = weight_lb) %>%
+  select(-height_inches) %>%
+  rename("team name" = team_name) %>%
+  select(-team_short_name, - team_abbreviation, -team_id.y) %>%
+  rename("minutes played" = minutes_played.x,
+         "attempted passes" = attempted_passes,
+         "pass completion percentage" = pass_completion_percentage,
+         "expected pass completion percentage" = xpass_completion_percentage,
+         "pass completed over expected" = passes_completed_over_expected,
+         "pass completed over expected p100" = passes_completed_over_expected_p100,
+         "average distance (yards)" = avg_distance_yds)
+
+
 
 glimpse(working_data2)
-  # pick up from team_comp
+  # pick up from goals_minus_xgoals 
 ```
 
 
