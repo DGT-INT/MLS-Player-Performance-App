@@ -1,0 +1,43 @@
+---
+title: "03 EDA"
+author: "Daniel Tshiani"
+date: "2026-01-02"
+output: html_document
+---
+
+```{r}
+library(tidyverse)
+library(ggplot2)
+```
+
+```{r}
+working_data <- readRDS("../data/02 working data.rds")
+
+working_data <- working_data %>%
+  filter(season == 2025)
+```
+
+
+```{r}
+glimpse(working_data)
+```
+
+```{r}
+ggplot(working_data, aes(x = `gauranteed compensation`)) +
+  geom_histogram(bins = 50) +
+  scale_x_log10(labels = scales::dollar) +
+  labs(
+    title = "Distribution of MLS Players Salaries",
+    x = "Salary (log scale)",
+    y = "Number of Players"
+  )+
+  theme_minimal()
+```
+- Highly skewed to the right
+- There are clusers. a large mass near the league minimum, a mid-tier around a few hundred thousand
+- there is another peak just under the 1 million mark so that is another cluster. i am asuming its designated players
+- then there are also the extrem outliers. thats the Messi's and huge players.
+
+Even after log transformation, salaries exhibit strong tiering and extreme outliers. As a result, model performance will likely differ substantially between low- and high-salary players, so evaluation should be stratified by salary tier rather than relying on a single aggregate metric.
+
+
