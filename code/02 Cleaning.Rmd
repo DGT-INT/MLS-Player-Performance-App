@@ -263,7 +263,8 @@ working_data2 <- working_data %>%
          "base salary" = base_salary,
          "gauranteed compensation" = guaranteed_compensation) %>%
   select(-general_position.y, -competitions) %>%
-  mutate( position = as.factor(position)) %>%
+  mutate( position = as.factor(position),
+          season = as.factor(season)) %>%
   select(-team_competitions) %>%
   rename("player name" = player_name,
          "date of birth" = birth_date,
@@ -279,9 +280,22 @@ working_data2 <- working_data %>%
          "expected pass completion percentage" = xpass_completion_percentage,
          "pass completed over expected" = passes_completed_over_expected,
          "pass completed over expected p100" = passes_completed_over_expected_p100,
-         "average distance (yards)" = avg_distance_yds)
-
-
+         "average distance (yards)" = avg_distance_yds,
+         "average distance vertical yards" = avg_vertical_distance_yds,
+         "share of team touches" = share_team_touches,
+         "games played" = count_games) %>%
+  select(-team_id, -minutes_played.y) %>%
+  rename("shots on target" = shots_on_target,
+         "expected goals" = xgoals,
+         "goals - expected goals" = goals_minus_xgoals,
+         "key passes" = key_passes,
+         "assists" = primary_assists,
+         "expected assists" = xassists,
+         "primary assists - exp. assists" = primary_assists_minus_xassists,
+         "exp. goals + exp. assists" = xgoals_plus_xassists,
+         "points added" = points_added,
+         "exp.points added" = xpoints_added,
+         "goals + assists" = goals_plus_primary_assists)
 
 glimpse(working_data2)
   # pick up from goals_minus_xgoals 
