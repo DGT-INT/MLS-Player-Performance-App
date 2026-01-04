@@ -25,10 +25,39 @@ glimpse(working_data)
 ```{r}
 ggplot(working_data, aes(x = `gauranteed compensation`)) +
   geom_histogram(bins = 50) +
+  scale_x_continuous(labels = scales::dollar) +
+  labs(
+    title = "Distribution of MLS Players Salaries",
+    x = "Salary",
+    y = "Number of Players"
+  )+
+  theme_minimal()
+```
+
+The data is risht skewed so i will analyze log('gauranteed compensation') instead of the raw one
+
+
+```{r}
+max_gauranteed_compensation <- max(working_data$`gauranteed compensation`, na.rm = TRUE)
+
+ggplot(working_data, aes(x = `gauranteed compensation`)) +
+  geom_histogram(bins = 50) +
+  geom_vline(
+    xintercept = max_gauranteed_compensation,
+    linetype = "dashed"
+  )+
+  annotate(
+    "text",
+    x = max_gauranteed_compensation,
+    y = Inf,
+    label = paste0("Max: ", scales::dollar(max_gauranteed_compensation)),
+    vjust = 1.5,
+    hjust = 1.1
+  )+
   scale_x_log10(labels = scales::dollar) +
   labs(
     title = "Distribution of MLS Players Salaries",
-    x = "Salary (log scale)",
+    x = "Salary",
     y = "Number of Players"
   )+
   theme_minimal()
@@ -39,5 +68,44 @@ ggplot(working_data, aes(x = `gauranteed compensation`)) +
 - then there are also the extrem outliers. thats the Messi's and huge players.
 
 Even after log transformation, salaries exhibit strong tiering and extreme outliers. As a result, model performance will likely differ substantially between low- and high-salary players, so evaluation should be stratified by salary tier rather than relying on a single aggregate metric.
+
+
+
+```{r}
+working_data <- working_data %>%
+  mutate(minutes_played = `minutes played`,
+         guaranteed_compensation = `gauranteed compensation`)
+
+ggplot(working_data, aes(
+  x = minutes_played,
+  y = guaranteed_compensation
+)) +
+  geom_point() +
+  scale_y_log10(labels = scales::dollar) +
+  labs(
+    title = "Salary vs Playing Time",
+    x = "Minutes Played",
+    y = "Salary (log scale)"
+  )+
+  geom_smooth(method = "loess") +
+  theme_minimal()
+```
+
+```{r}
+cor(working_data$minutes_played, working_data$guaranteed_compensation)
+```
+
+The scatter plot shows no obvious correlation between minutes played and guaranteed compensation. This suggests that player salary does not appear to be strongly influenced by how much they are on the field.
+
+```{r}
+# the spaces in the column names were causing erros so i add a variable with an underscore and delete
+working_data <- working_data %>%
+  select(-minutes_played, guaranteed_compensation)
+```
+
+
+
+
+
 
 
