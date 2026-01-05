@@ -169,5 +169,10 @@ ggcorrplot(corr_matrix, lab = TRUE, type = "lower", title = "Correlation Heatmap
 ```
 Pass completion percentage does not seem to have any correlation with salary. this hints that it can be excluded from the model.
 
+```{r}
+# i filtered based on season above
+
+saveRDS(working_data, file = "../data/03 working data season 2025.rds") 
+```
 
 

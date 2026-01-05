@@ -1,0 +1,57 @@
+---
+title: "04 EDA"
+author: "Daniel Tshiani"
+date: "2026-01-04"
+output: html_document
+---
+
+```{r}
+library(tidyverse)
+```
+
+```{r}
+working_data <- readRDS("../data/03 working data season 2025.rds")
+```
+
+```{r}
+sapply(working_data, function(x) {
+  if (is.factor(x)) length(unique(x))
+})
+```
+
+```{r}
+# limited season and competition to 1 so i am filtering them out
+working_data <- working_data %>%
+  select(-season, # limited to only 2025 season
+         -competition, # limited to only MLS
+         -`player name`, # irrelevant for modeling
+         -position, # already have general position
+         -`base salary`, # nearly replica of dependent variable
+         -`date of birth`, # already have age in the model
+         -nationality, # too many individual factors. I reduced it to a binary home-grown flag to match MLS league rules
+         ) %>%
+  mutate("height (cm)" = 30.48 * `height (ft)` + 2.54 * `height (in)`) %>% # consolidating height in 1 variable
+  select(-`height (ft)`,
+         -`height (in)`,
+         -`games played`, # correlated to minutes played
+         -guaranteed_compensation,
+         -`goals + assists`, # already have both variables in the model
+         -`primary assists - exp. assists`, # already have both variables in the model
+         -`team name` # i want the model to learn from the individual players rather than the collected team
+         ) %>%
+  mutate(log_salary = log(`gauranteed compensation`)) %>% # modeling on a log scale to address skewness and heteroskedascity
+  select(
+    -`gauranteed compensation` 
+  )
+
+```
+
+# Baseline model
+
+```{r}
+lm_baseline <- lm(log_salary ~ .,
+                  data = working_data)
+
+summary(lm_baseline)
+```
+
