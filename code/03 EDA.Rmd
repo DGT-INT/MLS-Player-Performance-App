@@ -8,6 +8,7 @@ output: html_document
 ```{r}
 library(tidyverse)
 library(ggplot2)
+library(ggcorrplot)
 ```
 
 ```{r}
@@ -16,7 +17,6 @@ working_data <- readRDS("../data/02 working data.rds")
 working_data <- working_data %>%
   filter(season == 2025)
 ```
-
 
 ```{r}
 glimpse(working_data)
@@ -35,7 +35,6 @@ ggplot(working_data, aes(x = `gauranteed compensation`)) +
 ```
 
 The data is risht skewed so i will analyze log('gauranteed compensation') instead of the raw one
-
 
 ```{r}
 max_gauranteed_compensation <- max(working_data$`gauranteed compensation`, na.rm = TRUE)
@@ -62,14 +61,13 @@ ggplot(working_data, aes(x = `gauranteed compensation`)) +
   )+
   theme_minimal()
 ```
-- Highly skewed to the right
-- There are clusers. a large mass near the league minimum, a mid-tier around a few hundred thousand
-- there is another peak just under the 1 million mark so that is another cluster. i am asuming its designated players
-- then there are also the extrem outliers. thats the Messi's and huge players.
+
+-   Highly skewed to the right
+-   There are clusers. a large mass near the league minimum, a mid-tier around a few hundred thousand
+-   there is another peak just under the 1 million mark so that is another cluster. i am asuming its designated players
+-   then there are also the extrem outliers. thats the Messi's and huge players.
 
 Even after log transformation, salaries exhibit strong tiering and extreme outliers. As a result, model performance will likely differ substantially between low- and high-salary players, so evaluation should be stratified by salary tier rather than relying on a single aggregate metric.
-
-
 
 ```{r}
 working_data <- working_data %>%
@@ -103,9 +101,73 @@ working_data <- working_data %>%
   select(-minutes_played, guaranteed_compensation)
 ```
 
+```{r}
+ggplot(working_data, aes(x = `general position`, y = `gauranteed compensation`)) +
+  scale_y_log10(labels = scales::dollar) +
+  geom_boxplot() +
+  theme_minimal()
+```
 
+Boxplots show that salary distributions are right-skewed with outliers, so interpretation requires caution. Still, the medians and upper quartiles indicate that forwards earn the most, then midfielders, defenders, and goalkeepers.
 
+```{r}
+ggplot(working_data, aes(x = reorder(`team name`, `gauranteed compensation`, FUN= median),
+                         y = `gauranteed compensation`)) +
+  scale_y_log10(labels = scales::dollar) +
+  geom_boxplot() +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(
+    title = "Salary Distribution by Team",
+    y = "Salary (log scale)",
+    x = "Teams"
+  )
+```
 
+points added and expected points added are performance metrics. I do admit that they favor offensive players, however to the best of my knowledge this metric is the best metric to measure the influence of a field player. I wouldnt use this metric to compare the performance of players in different positions however it can be used to compare the performance of players within the same position.
+
+```{r}
+ggplot(working_data, aes(
+  x = `points added`,
+  y = guaranteed_compensation
+)) +
+  geom_point() +
+  scale_y_log10(labels = scales::dollar) +
+  labs(
+    title = "Salary vs Points Added by Position",
+    x = "Points Added",
+    y = "Salary (log scale)"
+  )+
+  geom_smooth(method = "loess") +
+  theme_minimal() + facet_wrap(~`general position`)
+```
+ The visualizations suggets for forwards and midfielders, salary is positevly correlataed with performance metrics. For defenders and goalkeepers, the visualization suggest a negative correlation. As mentioned above, in my personal opinion i dont think this measure represents defenders and goalkeepers well. I dont have proper performance metrics for those positions.
+ 
+```{r}
+ggplot(working_data, aes(
+  x = `exp.points added`,
+  y = guaranteed_compensation
+)) +
+  geom_point() +
+  scale_y_log10(labels = scales::dollar) +
+  labs(
+    title = "Salary vs Playing Time",
+    x = "Expected Points Added",
+    y = "Salary (log scale)"
+  )+
+  geom_smooth(method = "loess") +
+  theme_minimal() + facet_wrap(~`general position`)
+```
+Expected points added lowkey re-iterates that this measures isnt suitable for defenders and goalkeepers. However, it does suggest offensvie players are paid accordingly based on what is expected from them.
+
+```{r}
+numeric_vars <- working_data %>%
+  select(`gauranteed compensation`, goals, assists, age, `minutes played`, `attempted passes`, `pass completion percentage`, `points added`)
+
+corr_matrix <- cor(numeric_vars, use = "complete.obs")
+ggcorrplot(corr_matrix, lab = TRUE, type = "lower", title = "Correlation Heatmap")
+```
+Pass completion percentage does not seem to have any correlation with salary. this hints that it can be excluded from the model.
 
 
 
