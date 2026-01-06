@@ -8,6 +8,7 @@ output: html_document
 ```{r}
 library(tidyverse)
 library(caret)
+library(randomForest)
 ```
 
 ```{r}
@@ -95,4 +96,44 @@ Adjusted R² is used for linear models to account for model complexity and ensur
 summary(lm_baseline)$adj.r.squared
 ```
 
+# Random Forest
 
+```{r}
+# i was having syntatic issues so this resolves it.
+names(train_data) <- make.names(names(train_data))
+names(test_data)  <- make.names(names(test_data))
+```
+
+
+```{r}
+rf_model <- randomForest(
+  log_salary ~.,
+  data = train_data,
+  ntree = 500,
+  mtry = floor(sqrt(ncol(train_data)-1)),
+  importance = TRUE
+)
+
+rf_model
+```
+
+```{r}
+importance(rf_model)
+```
+
+```{r}
+varImpPlot(rf_model)
+```
+
+```{r}
+preds_rf <- predict(rf_model, newdata = test_data)
+
+RMSE(preds_rf, test_data$log_salary)
+MAE(preds_rf, test_data$log_salary)
+R2(preds_rf, test_data$log_salary)
+```
+
+I need to comeback and tune the RF but it already appears to have improvement compared to baseline.
+
+
+# Lasso Regression
