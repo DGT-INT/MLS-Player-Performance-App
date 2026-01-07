@@ -9,6 +9,7 @@ output: html_document
 library(tidyverse)
 library(caret)
 library(randomForest)
+library(glmnet)
 ```
 
 ```{r}
@@ -76,25 +77,42 @@ summary(lm_baseline)
 
 ```{r}
 preds <- predict(lm_baseline, newdata = test_data)
-RMSE(preds, test_data$log_salary)
+lm_RMSE <- RMSE(preds, test_data$log_salary)
+lm_RMSE
 ```
 
 RMSE is used to evaluate models because it captures the typical size of prediction errors and discourages large misses.
 
 ```{r}
-MAE(preds, test_data$log_salary)
+lm_MAE <- MAE(preds, test_data$log_salary)
+lm_MAE
 ```
 MAE is reported alongside RMSE to show the average size of prediction errors without giving extra weight to large outliers.
 
 R² is included to provide context on how much of the variation in salary is explained by the model.
 ```{r}
-R2(preds, test_data$log_salary)
+lm_R2 <- R2(preds, test_data$log_salary)
+lm_R2
 ```
 
 Adjusted R² is used for linear models to account for model complexity and ensure that additional predictors meaningfully improve model fit.
 ```{r}
-summary(lm_baseline)$adj.r.squared
+lm_ADJR2 <- summary(lm_baseline)$adj.r.squared
+lm_ADJR2
 ```
+
+```{r}
+evaluation <- data.frame(
+  model = "Linear Regression",
+  RMSE = lm_RMSE,
+  MAE = lm_MAE,
+  R_squared = lm_R2,
+  Adjusted_R_squared = lm_ADJR2
+)
+
+evaluation
+```
+
 
 # Random Forest
 
@@ -125,15 +143,135 @@ importance(rf_model)
 varImpPlot(rf_model)
 ```
 
+Salary is strongly influenced by experience (age), roster designation (homegrown), and on-field involvement (minutes played, share of team touches, attempted passes). At first i was suprised that a metric like assist had less of an influence on salary however this model includes all positons. So for goalkeepers, defenders, and attackers who are goal oriented dont focus on assists. In the future, it probably more appropriate accomadate more for different positions.
+
 ```{r}
 preds_rf <- predict(rf_model, newdata = test_data)
 
-RMSE(preds_rf, test_data$log_salary)
-MAE(preds_rf, test_data$log_salary)
-R2(preds_rf, test_data$log_salary)
+rf_RMSE <- RMSE(preds_rf, test_data$log_salary)
+rf_MAE <- MAE(preds_rf, test_data$log_salary)
+rf_R2 <- R2(preds_rf, test_data$log_salary)
+
+evaluation <- rbind(
+  evaluation,
+  data.frame(
+  model = "Random Forest",
+  RMSE = rf_RMSE,
+  MAE = rf_MAE,
+  R_squared = rf_R2,
+  Adjusted_R_squared = NA #I'll come back to this if its relevant
+  )
+)
+
+evaluation
 ```
 
-I need to comeback and tune the RF but it already appears to have improvement compared to baseline.
+Compared to the baseline linear regression, the Random Forest model achieved lower RMSE and MAE while also explaining a greater proportion of variance in salary. This suggests that non-linear relationships and interactions between player characteristics play an important role in determining guaranteed compensation.
 
+Given its improved predictive accuracy across all evaluation metrics, the Random Forest model will selected over Linear Regression as the final model for deployment.
+
+```{r}
+# testing different parameters to see if i should dedicate time on tuning the random forest
+
+p <- ncol(train_data) - 1  
+
+mtry_values <- c(
+  floor(sqrt(p)),
+  floor(p / 3),
+  floor(p / 2),
+  p
+)
+
+rf_results <- data.frame(mtry = integer(), RMSE = numeric())
+
+for (m in mtry_values) {
+  
+  rf_temp <- randomForest(
+    log_salary ~ .,
+    data = train_data,
+    ntree = 500,
+    mtry = m
+  )
+  
+  preds <- predict(rf_temp, newdata = test_data)
+  
+  rmse <- sqrt(mean((test_data$log_salary - preds)^2))
+  
+  rf_results <- rbind(
+    rf_results,
+    data.frame(mtry = m, RMSE = rmse)
+  )
+}
+
+rf_results
+
+rf_results[which.min(rf_results$RMSE), ]
+
+```
+RMSE only changes by 1-2% when tuned so i am not going to dedicate too much time tuning it. when mtry is 8 the model performs best so that will be the threshold.
 
 # Lasso Regression
+```{r}
+X_train <- model.matrix(log_salary ~., data = train_data)[, -1]
+y_train <- train_data$log_salary
+
+X_test <- model.matrix(log_salary ~., data = test_data)[, -1]
+y_test <- test_data$log_salary
+```
+
+```{r}
+lasso_model <- cv.glmnet(
+  X_train,
+  y_train,
+  alpha =1,
+  nfolds = 10
+)
+
+lasso_model
+```
+
+```{r}
+lasso_model$lambda.min
+lasso_model$lambda.1se
+```
+
+I'll use lamda.min because its best for predictive performance
+
+```{r}
+lasso_lamda.min <- glmnet(
+  X_train,
+  y_train,
+  alpha = 1,
+  lambda = lasso_model$lambda.min
+)
+
+lasso_lamda.min
+```
+
+```{r}
+preds_lasso <- predict(lasso_lamda.min, s = lasso_model$lambda.min, newx = X_test)
+
+lasso_RMSE <- RMSE(preds_lasso, test_data$log_salary)
+lasso_MAE <- MAE(preds_lasso, test_data$log_salary)
+lasso_R2 <- R2(preds_lasso, test_data$log_salary)
+
+evaluation <- rbind(
+  evaluation,
+  data.frame(
+  model = "Lasso Regression",
+  RMSE = lasso_RMSE,
+  MAE = lasso_MAE,
+  R_squared = lasso_R2,
+  Adjusted_R_squared = NA #I'll come back to this if its relevant
+  )
+)
+
+evaluation
+
+```
+
+```{r}
+coef(lasso_lamda.min)
+```
+the benefit of lasso is that it does feature selection. so above we can see the coefficients that got excluded.
+
