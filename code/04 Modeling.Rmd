@@ -249,10 +249,16 @@ lasso_lamda.min
 ```
 
 ```{r}
+coef(lasso_lamda.min)
+```
+the benefit of lasso is that it does feature selection. so above we can see the coefficients that got excluded.
+
+```{r}
 preds_lasso <- predict(lasso_lamda.min, s = lasso_model$lambda.min, newx = X_test)
 
 lasso_RMSE <- RMSE(preds_lasso, test_data$log_salary)
 lasso_MAE <- MAE(preds_lasso, test_data$log_salary)
+preds_lasso <- as.numeric(preds_lasso) # added this due to compatiblity issues
 lasso_R2 <- R2(preds_lasso, test_data$log_salary)
 
 evaluation <- rbind(
@@ -270,8 +276,21 @@ evaluation
 
 ```
 
-```{r}
-coef(lasso_lamda.min)
-```
-the benefit of lasso is that it does feature selection. so above we can see the coefficients that got excluded.
+# Model Selection
 
+```{r}
+evaluation
+```
+
+```{r}
+library(ggplot2)
+
+ggplot(evaluation, aes(x = model, y = RMSE, fill = model)) +
+  geom_col() +
+  theme_minimal() +
+  labs(title = "Model Comparison: RMSE", y = "RMSE") +
+  scale_fill_brewer(palette = "Set2") +
+  theme(legend.position = "none")
+
+```
+Comparing the three models, Random Forest achieved the best predictive performance with the lowest RMSE and MAE as well as the highest R², capturing non-linear relationships between player features and salary. Lasso regression improved slightly over the baseline linear model while performing feature selection, highlighting key predictors, but did not outperform Random Forest. Linear regression provides a simple, interpretable benchmark.
