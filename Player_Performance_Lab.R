@@ -6,7 +6,8 @@ library(dplyr)
 library(tidyverse)
 library(scales)
 
-offensive_data <- readRDS("data/offensive_data.rds")
+offensive_data <- readRDS("data/offensive_data.rds") # old data to delete
+data_2025 <- readRDS("data/03 working data season 2025.rds")
 
 # Define UI for application that draws a histogram
 ui <- navbarPage("Player Performance Lab",
@@ -30,19 +31,19 @@ ui <- navbarPage("Player Performance Lab",
                tabPanel("Players",
                         sidebarLayout(
                           sidebarPanel(
-                            varSelectInput("offensive_var1", "What metric are you interested in?", data= offensive_data, selected = "goals"),
-                            varSelectInput("offensive_var2", "What other metric are you interested in?", data= offensive_data, selected = "goals"),
-                            sliderInput("offensive_age", "Select an age range", value= c(17,37), min = 15, max = 45),
+                            varSelectInput("players_var1", "What metric are you interested in?", data= data_2025, selected = "goals"),
+                            varSelectInput("players_var2", "What other metric are you interested in?", data= data_2025, selected = "assists"),
+                            sliderInput("players_age", "How old do you want the player to be?", value= c(17,37), min = 15, max = 45),
                             #verbatimTextOutput("lm_results"),
                             textInput("player_search", "Search for a player using their full name (case sensative):", value = ""),
-                            verbatimTextOutput("predicted_salary"),
-                            verbatimTextOutput("actual_salary")
+                            verbatimTextOutput("players_predicted_salary"),
+                            verbatimTextOutput("players_actual_salary")
                             
                           ),
                           mainPanel(
-                            verbatimTextOutput("offensive_top10"),
-                            plotOutput("offensive_var1_graph"),
-                            plotOutput("offensive_var2_graph")
+                            verbatimTextOutput("players_top10"),
+                            plotOutput("players_graph1"),
+                            plotOutput("players_graph2")
                           ) # closing mainPanel
                         ) 
                         ), #closing players tab
@@ -54,7 +55,7 @@ ui <- navbarPage("Player Performance Lab",
     
     navbarMenu("Data Frames",
                tabPanel("Players Data",
-                        dataTableOutput("offensive_data_table")
+                        dataTableOutput("players_data_table")
                         ),
                tabPanel("GoalKeepers Data"),
                tabPanel("Team Data"),
@@ -66,20 +67,18 @@ ui <- navbarPage("Player Performance Lab",
 server <- function(input, output, session) {
   
 # Players reactive data
-  attacking_data <- reactive({
-    temp <- offensive_data %>%
-      #select(player_name, team_name, age, general_position, input$offensive_var1, input$offensive_var2 ) %>%
-      arrange(desc(.data[[input$offensive_var1]]), desc(.data[[input$offensive_var2]])) %>%
-      filter(age >= input$offensive_age[1], age <= input$offensive_age[2])%>%
+  players_data <- reactive({
+    temp <- data_2025 %>%
+      arrange(desc(.data[[input$players_var1]]), desc(.data[[input$players_var2]])) %>%
+      filter(age >= input$players_age[1], age <= input$players_age[2])%>%
       filter(
-        !is.na(.data[[input$offensive_var1]]),
-        !is.na(.data[[input$offensive_var2]]),
-        !is.na(base_salary),
-        .data[[input$offensive_var1]] != 0,
-        .data[[input$offensive_var1]] != 0)
+        !is.na(.data[[input$players_var1]]),
+        !is.na(.data[[input$players_var2]]),
+        .data[[input$players_var1]] != 0,
+        .data[[input$players_var1]] != 0)
     
     temp
-  })
+  }) 
 
 # Home Tab
   output$logo <- renderImage({
@@ -93,20 +92,21 @@ server <- function(input, output, session) {
   
 # Scouting Tab
   # sub-section: Players
-  output$offensive_top10 <- renderPrint({
-    head(select(attacking_data(),player_name, team_name, age, general_position, input$offensive_var1, input$offensive_var2), 10)
+  output$players_top10 <- renderPrint({
+    head(select(players_data(),`player name`, `team name`, age, position, input$players_var1, input$players_var2), 10)
   }) # Players head
   
-  output$offensive_var1_graph <- renderPlot({
-    attacking_data() %>%
-      filter(!is.na(.data[[input$offensive_var1]])) %>%
-      slice_max(order_by = .data[[input$offensive_var1]], n = 10) %>%
-      ggplot(aes(x = reorder(player_name, .data[[input$offensive_var1]]),
-                 y = .data[[input$offensive_var1]])) +
+  # Players Graph 1
+  output$players_graph1 <- renderPlot({
+    players_data() %>%
+      filter(!is.na(.data[[input$players_var1]])) %>%
+      slice_max(order_by = .data[[input$players_var1]], n = 10) %>%
+      ggplot(aes(x = reorder(`player name`, .data[[input$players_var1]]),
+                 y = .data[[input$players_var1]])) +
       geom_col(fill = "green4") +
       coord_flip() +
-      labs(x = "Player", y = input$offensive_var1,
-           title = paste("Top 10 Players by", input$offensive_var1)) +
+      labs(x = "Player", y = input$players_var1,
+           title = paste("Top 10 Players by", input$players_var1)) +
       theme_minimal(base_size = 14) +
       theme(
         plot.background = element_rect(fill = "black", color = NA),
