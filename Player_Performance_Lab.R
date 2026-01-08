@@ -26,8 +26,8 @@ ui <- navbarPage("Player Performance Lab",
              )
              ), # closing panel for Home tab
     
-    navbarMenu("Players",
-               tabPanel("Offensive Players",
+    navbarMenu("Scouting",
+               tabPanel("Players",
                         sidebarLayout(
                           sidebarPanel(
                             varSelectInput("offensive_var1", "What metric are you interested in?", data= offensive_data, selected = "goals"),
@@ -45,28 +45,27 @@ ui <- navbarPage("Player Performance Lab",
                             plotOutput("offensive_var2_graph")
                           ) # closing mainPanel
                         ) 
-                        ), #closing Offensive players tab
+                        ), #closing players tab
                
-               tabPanel("Midfield Players"),
-               tabPanel("Defensive Players"),
-               tabPanel("Goalkeepers")
+               tabPanel("GoalKeepers"),
+               tabPanel("Teams"),
+               tabPanel("Referees")
                ), # closing navbarMenu for Players
     
     navbarMenu("Data Frames",
-               tabPanel("Offensive Data",
+               tabPanel("Players Data",
                         dataTableOutput("offensive_data_table")
                         ),
-               tabPanel("Midfield Data"),
-               tabPanel("Defensive Data"),
-               tabPanel("Goalkeepers Data")
-    ) # closing navbarMenu for Players
+               tabPanel("GoalKeepers Data"),
+               tabPanel("Team Data"),
+               tabPanel("Referee Data")
+    ) # closing navbarMenu for Data Frames
 
 )
 
-# Define server logic required to draw a histogram
 server <- function(input, output, session) {
   
-# Offensive reactive data
+# Players reactive data
   attacking_data <- reactive({
     temp <- offensive_data %>%
       #select(player_name, team_name, age, general_position, input$offensive_var1, input$offensive_var2 ) %>%
@@ -92,11 +91,11 @@ server <- function(input, output, session) {
     )
   }, deleteFile = FALSE) # DGT-INT logo
   
-# Players Tab
-  # sub-section: Offensive
+# Scouting Tab
+  # sub-section: Players
   output$offensive_top10 <- renderPrint({
     head(select(attacking_data(),player_name, team_name, age, general_position, input$offensive_var1, input$offensive_var2), 10)
-  }) # Offensive head
+  }) # Players head
   
   output$offensive_var1_graph <- renderPlot({
     attacking_data() %>%
@@ -119,7 +118,7 @@ server <- function(input, output, session) {
         axis.title = element_text(color = "white"),
         plot.title = element_text(color = "white", face = "bold")
       )
-  }) # Offensive graph 1
+  }) # Players graph 1
   
   output$offensive_var2_graph <- renderPlot({
     top10 <- attacking_data() %>%
@@ -147,7 +146,7 @@ server <- function(input, output, session) {
         legend.text = element_text(color = "white"),
         legend.title = element_text(color = "white")
       )
-  }) # Offensive graph 2
+  }) # Players graph 2
   
   output$lm_results <- renderPrint({
 
@@ -188,35 +187,35 @@ server <- function(input, output, session) {
   
 # Data Frames Tab
   
-  # sub-section: Offensive data
+  # sub-section: Players data
   output$offensive_data_table <- renderDT({
     datatable(offensive_data, options = list(pageLength = 100))
   })
   
   # Pop-up for membership
   observeEvent(input$tabs, {
-    if (input$tabs %in% c("Midfield Players", "Defensive Players", "Goalkeepers")) {
+    if (input$tabs %in% c("GoalKeepers", "Teams", "Referees")) {
       showModal(modalDialog(
         title = paste("The", input$tabs, "tab is a premium feature"),
-        paste("The", input$tabs, "tab is only available to premium users. Please upgrade your account if you would like to access this tab. You will now be re-directed to the Offensive Player tab."),
+        paste("The", input$tabs, "tab is only available to premium users. Please upgrade your account if you would like to access this tab. You will now be re-directed to the Player tab."),
         easyClose = TRUE,
         footer = NULL
       ))
       
-      updateTabsetPanel(session, inputId = "tabs", selected = "Offensive Players")
+      updateTabsetPanel(session, inputId = "tabs", selected = "Players")
     }
   })
   
   observeEvent(input$tabs, {
-    if (input$tabs %in% c("Midfield Data", "Defensive Data", "Goalkeepers Data")) {
+    if (input$tabs %in% c("GoalKeepers Data", "Team Data", "Referee Data")) {
       showModal(modalDialog(
         title = paste("The", input$tabs, "tab is a premium feature"),
-        paste("The", input$tabs, "tab is only available to premium users. Please upgrade your account if you would like to access this tab. You will now be re-directed to the Offensive Data tab."),
+        paste("The", input$tabs, "tab is only available to premium users. Please upgrade your account if you would like to access this tab. You will now be re-directed to the Data tab."),
         easyClose = TRUE,
         footer = NULL
       ))
       
-      updateTabsetPanel(session, inputId = "tabs", selected = "Offensive Data")
+      updateTabsetPanel(session, inputId = "tabs", selected = "Players Data")
     }
   })
   
