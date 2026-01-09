@@ -118,20 +118,21 @@ server <- function(input, output, session) {
         axis.title = element_text(color = "white"),
         plot.title = element_text(color = "white", face = "bold")
       )
-  }) # Players graph 1
+  }) 
   
-  output$offensive_var2_graph <- renderPlot({
-    top10 <- attacking_data() %>%
-      arrange(desc(.data[[input$offensive_var1]])) %>%
+  # Players graph 2
+  output$players_graph2 <- renderPlot({
+    top10 <- players_data() %>%
+      arrange(desc(.data[[input$players_var1]])) %>%
       slice_head(n = 10)
     
-    ggplot(top10, aes(x = .data[[input$offensive_var2]], y = .data[[input$offensive_var1]], color = player_name)) +
+    ggplot(top10, aes(x = .data[["minutes played"]], y = .data[[input$players_var1]], color = `player name`)) +
       geom_point(size = 3) +
       geom_smooth(method = "lm", se = FALSE, color= "white") +
       labs(
-        x = input$offensive_var2,
-        y = input$offensive_var1,
-        title = paste("Top 10 Players by", input$offensive_var2)
+        x = "Minutes Played",
+        y = input$players_var1,
+        title = paste("Top 10 Players by", input$players_var1)
       ) +
       theme_minimal(base_size = 14) +
       theme(
@@ -146,8 +147,9 @@ server <- function(input, output, session) {
         legend.text = element_text(color = "white"),
         legend.title = element_text(color = "white")
       )
-  }) # Players graph 2
+  }) 
   
+  # Players Salary model
   output$lm_results <- renderPrint({
 
     salary_model <- lm(base_salary ~ goals + primary_assists + age + minutes_played + shots + shots_on_target + key_passes, data = attacking_data())
