@@ -27,7 +27,7 @@ sapply(working_data, function(x) {
 working_data <- working_data %>%
   select(-season, # limited to only 2025 season
          -competition, # limited to only MLS
-         -`player name`, # irrelevant for modeling
+         #-`player name`, # irrelevant for modeling
          -position, # already have general position
          -`base salary`, # nearly replica of dependent variable
          -`date of birth`, # already have age in the model

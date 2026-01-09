@@ -8,6 +8,7 @@ library(scales)
 
 offensive_data <- readRDS("data/offensive_data.rds") # old data to delete
 data_2025 <- readRDS("data/03 working data season 2025.rds")
+rf_model <- readRDS("models/salary rf model.rds")
 
 # Define UI for application that draws a histogram
 ui <- navbarPage("Player Performance Lab",
@@ -34,8 +35,7 @@ ui <- navbarPage("Player Performance Lab",
                             varSelectInput("players_var1", "What metric are you interested in?", data= data_2025, selected = "goals"),
                             varSelectInput("players_var2", "What other metric are you interested in?", data= data_2025, selected = "assists"),
                             sliderInput("players_age", "How old do you want the player to be?", value= c(17,37), min = 15, max = 45),
-                            #verbatimTextOutput("lm_results"),
-                            textInput("player_search", "Search for a player using their full name (case sensative):", value = ""),
+                            textInput("players_search", "Search for a player using their full name (case sensative):", value = ""),
                             verbatimTextOutput("players_predicted_salary"),
                             verbatimTextOutput("players_actual_salary")
                             
@@ -149,36 +149,29 @@ server <- function(input, output, session) {
       )
   }) 
   
-  # Players Salary model
-  output$lm_results <- renderPrint({
-
-    salary_model <- lm(base_salary ~ goals + primary_assists + age + minutes_played + shots + shots_on_target + key_passes, data = attacking_data())
-    summary(salary_model)
+  # Players predicted salary
+  output$players_predicted_salary <- renderPrint({
+    req(input$players_search)
     
-  })
-  
-  output$predicted_salary <- renderPrint({
-    req(input$player_search)
-    
-    player_row <- offensive_data %>%
-      filter(player_name == input$player_search)
+    player_row <- data_2025 %>%
+      filter(`player name` == input$players_search)
     
     if (nrow(player_row) == 0) {
       return("Player not found.")
     }
     
-    salary_model <- lm(base_salary ~ goals + primary_assists + age + minutes_played + shots + shots_on_target + key_passes, data = attacking_data())
-    
-    prediction <- predict(salary_model, newdata = player_row)
-    paste("Estimated Salary:", dollar(prediction))
+# NEED TO FIX PREDICTION MODEL HERE
+    prediction <- predict(rf_model, newx = player_row)
+    paste("Estimated Salary:", scales::dollar(exp(prediction)))
   })
   
-  output$actual_salary <- renderPrint({
-    req(input$player_search)
+  # Players Actual Salary
+  output$players_actual_salary <- renderPrint({
+    req(input$players_search)
     
-    actual <- offensive_data %>%
-      filter(player_name == input$player_search) %>%
-      pull(base_salary)
+    actual <- data_2025 %>%
+      filter(`player name` == input$players_search) %>%
+      pull(`base salary`)
     
     if (length(actual) == 0) {
       return("Actual salary not found.")
