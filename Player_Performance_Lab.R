@@ -153,38 +153,41 @@ server <- function(input, output, session) {
   
   ################################################
   # Players predicted salary
-  # output$players_predicted_salary <- renderPrint({
-  #   req(input$players_search)
-  #   
-  #   player_row <- data_2025 %>%
-  #     mutate("height (cm)" = 30.48 * `height (ft)` + 2.54 * `height (in)`) %>%
-  #     filter(`player name` == input$players_search) 
-  #   
-  #   if (nrow(player_row) == 0) {
-  #     return("Player not found.")
-  #   }
-  #   
-  #   # Match training column names
-  #   names(player_row) <- make.names(names(player_row))
-  #   
-  #   # Safety check: required variables exist
-  #   missing_vars <- setdiff(rf_vars, names(player_row))
-  #   if (length(missing_vars) > 0) {
-  #     return(
-  #       paste("Missing required variables:", paste(missing_vars, collapse = ", "))
-  #     )
-  #   }
-  #   
-  #   player_row <- player_row %>%
-  #     select(all_of(rf_vars))
-  #   
-  #   # Align factor levels
-  #   for (v in names(rf_xlevels)) {
-  #     player_row[[v]] <- factor(
-  #       player_row[[v]],
-  #       levels = rf_xlevels[[v]]
-  #     )
-  #   }
+   output$players_predicted_salary <- renderPrint({
+     req(input$players_search)
+     
+     player_row <- data_2025 %>%
+       mutate("height (cm)" = 30.48 * `height (ft)` + 2.54 * `height (in)`) %>%
+       filter(`player name` == input$players_search) 
+        
+     if (nrow(player_row) == 0) {
+       return("Player not found.")
+     }
+     
+     # Match training column names
+     names(player_row) <- make.names(names(player_row))
+  
+     # Safety check: required variables exist
+     missing_vars <- setdiff(rf_vars, names(player_row))
+     if (length(missing_vars) > 0) {
+       return(
+         paste("Missing required variables:", paste(missing_vars, collapse = ", "))
+       )
+     }
+  
+     player_row <- player_row %>%
+       select(all_of(rf_vars))
+     
+     # Align factor levels ## there is a problem with this chunk
+     for (v in names(rf_xlevels)) {
+       player_row[[v]] <- factor(
+         player_row[[v]],
+         levels = rf_xlevels[[v]]
+       )
+     }
+     
+     anyNA(player_row) # this is true which means something went wrong in the step above
+     colSums(is.na(player_row)) # this chunk lets me know which columns were affected by the chunk above
   #   
   #   if (anyNA(player_row)) {
   #     na_cols <- names(player_row)[colSums(is.na(player_row)) > 0]
@@ -196,7 +199,7 @@ server <- function(input, output, session) {
   #   salary_prediction <- exp(log_prediction)
   #   
   #   paste("Estimated Salary:", scales::dollar(salary_prediction))
-  # })
+   })
   
   ################################################
   # Players Actual Salary
