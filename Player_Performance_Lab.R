@@ -9,6 +9,8 @@ library(scales)
 offensive_data <- readRDS("data/offensive_data.rds") # old data to delete
 data_2025 <- readRDS("data/03 working data season 2025.rds")
 rf_model <- readRDS("models/salary rf model.rds")
+rf_vars <-  readRDS("models/rf_vars.rds")
+rf_xlevels <-  readRDS("models/rf_xlevels.rds")
 
 # Define UI for application that draws a histogram
 ui <- navbarPage("Player Performance Lab",
@@ -149,22 +151,54 @@ server <- function(input, output, session) {
       )
   }) 
   
+  ################################################
   # Players predicted salary
-  output$players_predicted_salary <- renderPrint({
-    req(input$players_search)
-    
-    player_row <- data_2025 %>%
-      filter(`player name` == input$players_search)
-    
-    if (nrow(player_row) == 0) {
-      return("Player not found.")
-    }
-    
-# NEED TO FIX PREDICTION MODEL HERE
-    prediction <- predict(rf_model, newx = player_row)
-    paste("Estimated Salary:", scales::dollar(exp(prediction)))
-  })
+  # output$players_predicted_salary <- renderPrint({
+  #   req(input$players_search)
+  #   
+  #   player_row <- data_2025 %>%
+  #     mutate("height (cm)" = 30.48 * `height (ft)` + 2.54 * `height (in)`) %>%
+  #     filter(`player name` == input$players_search) 
+  #   
+  #   if (nrow(player_row) == 0) {
+  #     return("Player not found.")
+  #   }
+  #   
+  #   # Match training column names
+  #   names(player_row) <- make.names(names(player_row))
+  #   
+  #   # Safety check: required variables exist
+  #   missing_vars <- setdiff(rf_vars, names(player_row))
+  #   if (length(missing_vars) > 0) {
+  #     return(
+  #       paste("Missing required variables:", paste(missing_vars, collapse = ", "))
+  #     )
+  #   }
+  #   
+  #   player_row <- player_row %>%
+  #     select(all_of(rf_vars))
+  #   
+  #   # Align factor levels
+  #   for (v in names(rf_xlevels)) {
+  #     player_row[[v]] <- factor(
+  #       player_row[[v]],
+  #       levels = rf_xlevels[[v]]
+  #     )
+  #   }
+  #   
+  #   if (anyNA(player_row)) {
+  #     na_cols <- names(player_row)[colSums(is.na(player_row)) > 0]
+  #     return(paste("Prediction failed due to NA in:", paste(na_cols, collapse = ", ")))
+  #   }
+  #   
+  #   
+  #   log_prediction <- predict(rf_model, newdata = player_row)
+  #   salary_prediction <- exp(log_prediction)
+  #   
+  #   paste("Estimated Salary:", scales::dollar(salary_prediction))
+  # })
   
+  ################################################
   # Players Actual Salary
   output$players_actual_salary <- renderPrint({
     req(input$players_search)

@@ -27,7 +27,7 @@ sapply(working_data, function(x) {
 working_data <- working_data %>%
   select(-season, # limited to only 2025 season
          -competition, # limited to only MLS
-         #-`player name`, # irrelevant for modeling
+         -`player name`, # irrelevant for modeling
          -position, # already have general position
          -`base salary`, # nearly replica of dependent variable
          -`date of birth`, # already have age in the model
@@ -296,8 +296,20 @@ ggplot(evaluation, aes(x = model, y = RMSE, fill = model)) +
 Comparing the three models, Random Forest achieved the best predictive performance with the lowest RMSE and MAE as well as the highest R², capturing non-linear relationships between player features and salary. Lasso regression improved slightly over the baseline linear model while performing feature selection, highlighting key predictors, but did not outperform Random Forest. Linear regression provides a simple, interpretable benchmark.
 
 ```{r}
-model <- saveRDS(lasso_lamda.min, "../models/salary rf model.rds")
+saveRDS(rf_model, "../models/salary rf model.rds")
 ```
 
 Initially I had a working dataset that i could use for modeling and a app deployment data set that had the working data and more. during EDA i realized salary data was missing for the majority of the players outside the MLS. During the project i learned that there are nuances of the MLS that plays a large role in determining a players salary. It would be false to assume thos nuances are the same in US leagues outside the MLS. All this is to say that I will be using the working data set in the app because the app deployment data i have contains players in the USL and NWSL. It would no be appropriate to assume the same pay structures of these leagues.
+
+```{r}
+# need to save levels and column names for shiny app
+rf_xlevels <- rf_model$forest$xlevels
+saveRDS(rf_xlevels, "../models/rf_xlevels.rds")
+
+rf_vars <- colnames(train_data %>%
+                      select(-log_salary)
+                    )
+saveRDS(rf_vars, "../models/rf_vars.rds")
+```
+
 
