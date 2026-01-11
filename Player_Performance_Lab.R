@@ -5,6 +5,7 @@ library(ggplot2)
 library(dplyr)
 library(tidyverse)
 library(scales)
+library(randomForest)
 
 offensive_data <- readRDS("data/offensive_data.rds") # old data to delete
 data_2025 <- readRDS("data/03 working data season 2025.rds")
@@ -178,27 +179,16 @@ server <- function(input, output, session) {
      player_row <- player_row %>%
        select(all_of(rf_vars))
      
-     # Align factor levels ## there is a problem with this chunk
-     for (v in names(rf_xlevels)) {
-       player_row[[v]] <- factor(
-         player_row[[v]],
-         levels = rf_xlevels[[v]]
-       )
+     if (anyNA(player_row)) {
+       na_cols <- names(player_row)[colSums(is.na(player_row)) > 0]
+       return(paste("Prediction failed due to NA in:", paste(na_cols, collapse = ", ")))
      }
      
-     anyNA(player_row) # this is true which means something went wrong in the step above
-     colSums(is.na(player_row)) # this chunk lets me know which columns were affected by the chunk above
-  #   
-  #   if (anyNA(player_row)) {
-  #     na_cols <- names(player_row)[colSums(is.na(player_row)) > 0]
-  #     return(paste("Prediction failed due to NA in:", paste(na_cols, collapse = ", ")))
-  #   }
-  #   
-  #   
-  #   log_prediction <- predict(rf_model, newdata = player_row)
-  #   salary_prediction <- exp(log_prediction)
-  #   
-  #   paste("Estimated Salary:", scales::dollar(salary_prediction))
+     
+     log_prediction <- predict(rf_model, newdata = player_row)
+     salary_prediction <- exp(log_prediction)
+     
+     paste("Estimated Salary:", scales::dollar(salary_prediction))
    })
   
   ################################################
